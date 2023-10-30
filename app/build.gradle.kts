@@ -19,6 +19,7 @@ repositories {
 
 tasks.withType<JavaExec> {
     systemProperty("OUTPUT_DIR", project.findProperty("OUTPUT_DIR") ?: "output")
+    systemProperty("OUTPUT_DIR", project.findProperty("INPUT_DIR") ?: "sample_images")
 }
 
 repositories {

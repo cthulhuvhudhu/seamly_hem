@@ -1,5 +1,6 @@
 package org.thuthu.seamlyhem
 
+import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -7,14 +8,28 @@ import javax.imageio.ImageIO
 class FileManager {
 
     fun saveImage(f: RenderedImage, fileName: String) {
+        // TODO overwrite ok for now; may be why it takes longer
+        val file = connectFile(sanitize(fileName), System.getProperty("OUTPUT_DIR") ?: "output")
+        ImageIO.write(f, "PNG", file)
 
-        // TODO overwrite ok; may be why it takes logner
-        val outputFolderPath = System.getProperty("OUTPUT_DIR") ?: "output"
-        val outputDirectory = File(outputFolderPath)
-        val outputFile = File(outputDirectory, fileName)
-        ImageIO.write(f, "PNG", outputFile)
-
-        // TODO replace with logs
+        // TODO replace/add logs
         println("File saved as $fileName")
+    }
+
+    fun getImage(fileName: String): BufferedImage {
+        val file = connectFile(sanitize(fileName), System.getProperty("INPUT_DIR") ?: "sample_images")
+        return ImageIO.read(file)
+    }
+
+    private fun connectFile(fileName:String, dirName: String): File {
+        val dir = File(dirName)
+        return File(dir, sanitize(fileName))
+    }
+
+    private fun sanitize(filename: String): String {
+        if (!filename.endsWith(".png", false)) {
+            return "$filename.png"
+        }
+        return filename
     }
 }

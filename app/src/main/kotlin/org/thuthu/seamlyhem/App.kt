@@ -1,24 +1,31 @@
 package org.thuthu.seamlyhem
 
+import kotlin.system.exitProcess
+
 class App {
-    internal val iGenerator = ImageGenerator()
-    internal val fileManager = FileManager()
+    internal val operationsManager = OperationsManager()
 }
-fun main() {
-    println("Enter rectangle width:")
-    val width: Int = readln().toInt() //20
-    // TODO exception handling; retry
-    // TODO replace printlns with logs
-    println("Enter rectangle height:")
-    val height = readln().toInt() // 20
-    println("Enter output image name:")
-    var imageName = readln() // out.png
-    if (!imageName.endsWith(".png", false)) {
-        imageName = "$imageName.png"
+
+fun main(xargs: Array<String>) {
+
+    if (xargs.contains("help")) {
+        usage()
+        exitProcess(0)
     }
 
-    // Generate red cross
-    val image = App().iGenerator.redCross(width, height)
-    // Save
-    App().fileManager.saveImage(image, imageName)
+    if (xargs.isEmpty()) {
+        App().operationsManager.stage1()
+        exitProcess(0)
+    }
+
+    // Intentional fail if incorrect params. Add usage message, retry later.
+    val outImageName = xargs[xargs.indexOfFirst { it == "-out" } + 1]
+    val inputFileName = xargs[xargs.indexOfFirst { it == "-in" } + 1]
+    App().operationsManager.stage2(inputFileName, outImageName)
+}
+
+private fun usage() {
+    println("Expected usage:")
+    println("Stage One - Black rectangle with red cross: no parameters")
+    println("Stage two - Invert image: -in inputFileName -out outputFileName")
 }
