@@ -12,13 +12,19 @@ class OperationsManager {
         val height = readln().toInt() // 20
         println("Enter output image name:")
         val outputFileName = readln() // out.png
-        val image = iGenerator.redCross(width, height)
+        val image = iGenerator.generateRedCross(width, height)
         fileManager.saveImage(image, outputFileName)
     }
 
     fun stage2(inputFileName: String, outputFileName: String) {
-        val stream = fileManager.getImage(inputFileName)
-        val image = iGenerator.invert(stream)
-        fileManager.saveImage(image, outputFileName)
+        val inFile = fileManager.getImage(inputFileName)
+        val image = iGenerator.generateInverted(inFile)
+        fileManager.saveImage(image, "$outputFileName-inverted.png")
+    }
+
+    fun stage3(inputFileName: String, outputFileName: String) {
+        val inFile = fileManager.getImage(inputFileName)
+        val image = iGenerator.generateIntensity(inFile)
+        fileManager.saveImage(image, "$outputFileName-energy.png")
     }
 }

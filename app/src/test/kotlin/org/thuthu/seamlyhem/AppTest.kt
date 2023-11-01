@@ -9,7 +9,6 @@ import kotlin.test.assertNotNull
 class AppTest {
     @Test fun appHasAGreeting() {
         val classUnderTest = App()
-        assertNotNull(classUnderTest.fileManager, "app should have a fileManager")
-        assertNotNull(classUnderTest.iGenerator, "app should have a imageGenerator")
+        assertNotNull(classUnderTest.operationsManager, "app should have a operationsManager")
     }
 }
