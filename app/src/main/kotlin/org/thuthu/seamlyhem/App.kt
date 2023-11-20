@@ -1,32 +1,34 @@
 package org.thuthu.seamlyhem
 
+import org.thuthu.seamlyhem.App.Companion.IN_FLAG
+import org.thuthu.seamlyhem.App.Companion.OUT_FLAG
 import kotlin.system.exitProcess
 
 class App {
     internal val operationsManager = OperationsManager()
+
+    companion object {
+        internal const val IN_FLAG = "-in"
+        internal const val OUT_FLAG = "-out"
+    }
 }
 
 fun main(xargs: Array<String>) {
+    checkUsage(xargs)
 
-    if (xargs.contains("help")) {
-        usage()
-        exitProcess(0)
-    }
+    val outImageName = xargs[xargs.indexOfFirst { it == OUT_FLAG } + 1]
+    val inputFileName = xargs[xargs.indexOfFirst { it == IN_FLAG } + 1]
 
-    if (xargs.isEmpty()) {
-        App().operationsManager.stage1()
-        exitProcess(0)
-    }
+    check(outImageName.isNotBlank()) { "Valid image name for output required." }
+    check(inputFileName.isNotBlank()) { "Valid file name for input required." }
 
-    // Intentional fail if incorrect params. Add usage message, retry later.
-    val outImageName = xargs[xargs.indexOfFirst { it == "-out" } + 1]
-    val inputFileName = xargs[xargs.indexOfFirst { it == "-in" } + 1]
-    App().operationsManager.stage2(inputFileName, outImageName)
-    App().operationsManager.stage3(inputFileName, outImageName)
+    App().operationsManager.process(inputFileName, outImageName)
 }
 
-private fun usage() {
-    println("Expected usage:")
-    println("Stage One - Black rectangle with red cross: no parameters")
-    println("Stage two - Invert image; Stage three - Intensity image: -in inputFileName -out outputFileName")
+private fun checkUsage(xargs: Array<String>) {
+    if (xargs.contains("help") || xargs.isEmpty() || !xargs.contains(IN_FLAG) || !xargs.contains(OUT_FLAG)) {
+        println("Expected usage:")
+        println("-in inputFileName -out outputFileName")
+        exitProcess(0)
+    }
 }

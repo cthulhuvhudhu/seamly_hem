@@ -1,30 +1,33 @@
 package org.thuthu.seamlyhem
 
-class OperationsManager {
-    private val iGenerator = ImageGenerator()
-    private val fileManager = FileManager()
+import java.awt.image.BufferedImage
+import java.awt.image.RenderedImage
+import kotlin.reflect.KCallable
+import kotlin.reflect.jvm.reflect
 
-    fun stage1() {
-        println("Enter rectangle width:")
-        val width = readln().toInt() // 20
-        // TODO v2:exception handling; retry
-        println("Enter rectangle height:")
-        val height = readln().toInt() // 20
-        println("Enter output image name:")
-        val outputFileName = readln() // out.png
-        val image = iGenerator.generateRedCross(width, height)
-        fileManager.saveImage(image, outputFileName)
+class OperationsManager(private val iGenerator: ImageGenerator = ImageGenerator(),
+        private val fileManager: FileManager = FileManager()) {
+
+    private lateinit var input: String
+    private lateinit var output: String
+
+    fun process(inputFileName: String, outputFileName: String) {
+        input = inputFileName
+        output = outputFileName
+        stage(iGenerator::generateRedCross)
+        stage(iGenerator::generateInverted)
+        stage(iGenerator::generateIntensity)
+        stage(iGenerator::generateSeam)
     }
 
-    fun stage2(inputFileName: String, outputFileName: String) {
-        val inFile = fileManager.getImage(inputFileName)
-        val image = iGenerator.generateInverted(inFile)
-        fileManager.saveImage(image, "$outputFileName-inverted.png")
+    private fun stage(xform: () -> (RenderedImage)) {
+        val image = xform()
+        fileManager.saveImage(image, "$output-${(xform as KCallable<*>).name}.png")
     }
 
-    fun stage3(inputFileName: String, outputFileName: String) {
-        val inFile = fileManager.getImage(inputFileName)
-        val image = iGenerator.generateIntensity(inFile)
-        fileManager.saveImage(image, "$outputFileName-energy.png")
+    private fun stage(xform: (BufferedImage) -> (RenderedImage)) {
+        val inFile = fileManager.getImage(input)
+        val image = xform(inFile)
+        fileManager.saveImage(image, "$output-${(xform as KCallable<*>).name}.png")
     }
 }

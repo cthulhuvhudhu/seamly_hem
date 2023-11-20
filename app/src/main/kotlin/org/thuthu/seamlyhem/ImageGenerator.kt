@@ -10,7 +10,14 @@ class ImageGenerator {
 
     private var maxEnergyValue by Delegates.notNull<Double>()
 
-    fun generateRedCross(w: Int, h: Int): RenderedImage {
+    fun generateRedCross(): RenderedImage {
+        println("Enter rectangle width:")
+        val w = readln().toInt() // 20
+        println("Enter rectangle height:")
+        val h = readln().toInt() // 20
+//        println("Enter output image name:")
+//        val outputFileName = readln() // out.png
+
         println("Generating red cross ...")
         // Create a BufferedImage with a black square
         val image = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
@@ -39,34 +46,91 @@ class ImageGenerator {
         for (x in 0 until input.width) {
             for (y in 0 until input.height) {
                 val rgb = input.getRGB(x, y) // HEX RGB int
-                input.setRGB(x, y, Companion.MAX_RGB - rgb)
+                input.setRGB(x, y, MAX_RGB - rgb)
             }
         }
         return input
     }
 
     fun generateIntensity(input: BufferedImage): RenderedImage {
-        println("Calculating energy ...")
-        assert(input.width > 2 && input.height > 2)
-
-        val image = BufferedImage(input.width, input.height, BufferedImage.TYPE_INT_RGB)
 
         val energies = calculateEnergies(input)
-        maxEnergyValue = energies.max()
 
-        val iter = energies.iterator()
+        // TODO refactor below into a receiving function
 
-        for (x in 0 until input.width) {
-            for (y in 0 until input.height) {
-                val iColor = intensity(iter.next())
+        println("Calculating intensity...")
+
+        val image = BufferedImage(input.width, input.height, BufferedImage.TYPE_INT_RGB)
+        maxEnergyValue = energies.flatten().max()
+
+        for (y in 0 until input.height) {
+            for (x in 0 until input.width) {
+                val iColor = intensity(energies[y][x])
                 image.setRGB(x, y, iColor.rgb)
             }
         }
         return image
     }
 
-    private fun calculateEnergies(input: BufferedImage): ArrayDeque<Double> {
-        val energies = ArrayDeque<Double>(input.width * input.height)
+    fun generateSeam(input: BufferedImage): RenderedImage  {
+
+        val energies = calculateEnergies(input) // ArrayDeque<Double>
+
+        // TODO refactor below into a receiving function
+
+        // calc ALL seams
+
+        println("Dynamically calculating seam values...")
+        // Populate
+        for (y in 0 until input.height) {
+            for (x in 0 until input.width) {
+                if (y > 0) {
+                    var min = energies[y-1][x]
+                    if (x > 0) {
+                        min = min.coerceAtMost(energies[y - 1][x - 1])
+                    }
+                    if (x < input.width-1) {
+                        min = min.coerceAtMost(energies[y - 1][x + 1])
+                    }
+                    energies[y][x] = energies[y][x] + min
+                }
+            }
+        }
+
+        // What do I do with multiple seams? Will do greedy first
+
+        // Find min at bottom and Greedy process
+        var min = energies[input.height-1].min()
+        var y = input.height-1
+        var x = energies[y].indexOf( min )
+
+        while (y > 0) {
+
+            // Paint
+//            println("Painting $x $y: ${energies[y][x]}")
+            input.setRGB(x, y, Color(255, 0, 0).rgb)
+
+            // iterate through known parents; then know indices directly
+            y -= 1
+            var newX = x
+            min = energies[y][newX]
+            if (x > 0 && energies[y][x-1] < min) {
+                newX -= 1
+                min = energies[y][newX]
+            }
+            if (x < input.width-1 && energies[y][x+1] < min) {
+                newX = x+1
+            }
+            x = newX
+        }
+        return input
+    }
+
+    private fun calculateEnergies(input: BufferedImage): MutableList<MutableList<Double>> {
+        println("Calculating energy ...")
+        assert(input.width > 2 && input.height > 2)
+
+        val energies = mutableListOf<MutableList<Double>>()
 
         var prevX: Int
         var nextX: Int
@@ -74,8 +138,11 @@ class ImageGenerator {
         var nextY: Int
         var currY: Int = -1
 
-        for (x in 0 until input.width) {
-            for (y in 0 until input.height) {
+        for (y in 0 until input.height) {
+
+            val rowEnergy = mutableListOf<Double>()
+
+            for (x in 0 until input.width) {
                 // calc Ys
 
                 when (y) {
@@ -117,8 +184,9 @@ class ImageGenerator {
 
                 val dSqX = Color(prevX).dSq(Color(nextX))
 
-                energies.add(dSqY.e(dSqX))
+                rowEnergy.add(dSqY.e(dSqX))
             }
+            energies.add(rowEnergy)
         }
         return energies
     }

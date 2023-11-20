@@ -36,6 +36,7 @@ dependencies {
 
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.1-jre")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.22")
 }
 
 application {
