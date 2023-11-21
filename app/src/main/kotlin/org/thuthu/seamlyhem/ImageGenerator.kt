@@ -72,42 +72,51 @@ class ImageGenerator {
         return image
     }
 
-    fun generateSeam(input: BufferedImage): RenderedImage  {
-
-        val energies = calculateEnergies(input) // ArrayDeque<Double>
-
-        // TODO refactor below into a receiving function
-
-        // calc ALL seams
-
-        println("Dynamically calculating seam values...")
-        // Populate
-        for (y in 0 until input.height) {
-            for (x in 0 until input.width) {
-                if (y > 0) {
-                    var min = energies[y-1][x]
-                    if (x > 0) {
-                        min = min.coerceAtMost(energies[y - 1][x - 1])
-                    }
-                    if (x < input.width-1) {
-                        min = min.coerceAtMost(energies[y - 1][x + 1])
-                    }
-                    energies[y][x] = energies[y][x] + min
-                }
-            }
-        }
+    fun generateXSeam(input: BufferedImage): RenderedImage {
+        val energies = sumSeam(transpose(calculateEnergies(input)))
 
         // What do I do with multiple seams? Will do greedy first
 
         // Find min at bottom and Greedy process
-        var min = energies[input.height-1].min()
-        var y = input.height-1
+        var min = energies.last().min()
+        var y = energies.size-1
+        var x = energies[y].indexOf( min )
+
+        while (y > 0) {
+
+            input.setRGB(y, x, Color(255, 0, 0).rgb)
+            // iterate through known parents; then know indices directly
+            y -= 1
+            var newX = x
+            min = energies[y][newX]
+            if (x > 0 && energies[y][x-1] < min) {
+                newX -= 1
+                min = energies[y][newX]
+            }
+            if (x < energies[0].size && energies[y][x+1] < min) {
+                newX = x+1
+            }
+            x = newX
+        }
+        return input
+    }
+
+    fun generateYSeam(input: BufferedImage): RenderedImage  {
+
+        val energies = sumSeam(calculateEnergies(input))
+
+        // TODO refactor below into a receiving function
+
+        // What do I do with multiple seams? Will do greedy first
+
+        // Find min at bottom and Greedy process
+        var min = energies.last().min()
+        var y = energies.size-1
         var x = energies[y].indexOf( min )
 
         while (y > 0) {
 
             // Paint
-//            println("Painting $x $y: ${energies[y][x]}")
             input.setRGB(x, y, Color(255, 0, 0).rgb)
 
             // iterate through known parents; then know indices directly
@@ -118,12 +127,31 @@ class ImageGenerator {
                 newX -= 1
                 min = energies[y][newX]
             }
-            if (x < input.width-1 && energies[y][x+1] < min) {
+            if (x < energies[0].size && energies[y][x+1] < min) {
                 newX = x+1
             }
             x = newX
         }
         return input
+    }
+
+    private fun sumSeam(energies: MutableList<MutableList<Double>>): List<List<Double>> {
+        println("Dynamically calculating seam values...")
+        for (y in energies.indices) {
+            for (x in energies[0].indices) {
+                if (y > 0) {
+                    var min = energies[y-1][x]
+                    if (x > 0) {
+                        min = min.coerceAtMost(energies[y - 1][x - 1])
+                    }
+                    if (x < energies[0].size-1) {
+                        min = min.coerceAtMost(energies[y - 1][x + 1])
+                    }
+                    energies[y][x] = energies[y][x] + min
+                }
+            }
+        }
+        return energies
     }
 
     private fun calculateEnergies(input: BufferedImage): MutableList<MutableList<Double>> {
@@ -189,6 +217,19 @@ class ImageGenerator {
             energies.add(rowEnergy)
         }
         return energies
+    }
+
+    private fun transpose(m: List<List<Double>>): MutableList<MutableList<Double>> {
+        val t = MutableList(m[0].size){
+            MutableList(m.size) { 0.0 }
+        }
+
+        for (r in m.indices) {
+            for (c in m[0].indices) {
+                t[c][r] = m[r][c]
+            }
+        }
+        return t
     }
 
     private infix fun Color.dSq(a: Color): Int {

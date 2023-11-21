@@ -3,7 +3,6 @@ package org.thuthu.seamlyhem
 import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
 import kotlin.reflect.KCallable
-import kotlin.reflect.jvm.reflect
 
 class OperationsManager(private val iGenerator: ImageGenerator = ImageGenerator(),
         private val fileManager: FileManager = FileManager()) {
@@ -17,7 +16,8 @@ class OperationsManager(private val iGenerator: ImageGenerator = ImageGenerator(
         stage(iGenerator::generateRedCross)
         stage(iGenerator::generateInverted)
         stage(iGenerator::generateIntensity)
-        stage(iGenerator::generateSeam)
+        stage(iGenerator::generateYSeam)
+        stage(iGenerator::generateXSeam)
     }
 
     private fun stage(xform: () -> (RenderedImage)) {
