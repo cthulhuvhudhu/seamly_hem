@@ -15,8 +15,6 @@ class ImageGenerator {
         val w = readln().toInt() // 20
         println("Enter rectangle height:")
         val h = readln().toInt() // 20
-//        println("Enter output image name:")
-//        val outputFileName = readln() // out.png
 
         println("Generating red cross ...")
         // Create a BufferedImage with a black square
@@ -39,7 +37,7 @@ class ImageGenerator {
         return image
     }
 
-    fun generateInverted(input: BufferedImage): RenderedImage {
+    fun generateInverted(input: BufferedImage): BufferedImage {
         println("Inverting image ...")
         // To create a negative image, you should invert all color components for every pixel.
         // Inverted color for (r, g, b) is (255 - r, 255 - g, 255 - b).
@@ -52,11 +50,9 @@ class ImageGenerator {
         return input
     }
 
-    fun generateIntensity(input: BufferedImage): RenderedImage {
+    fun generateIntensity(input: BufferedImage): BufferedImage {
 
         val energies = calculateEnergies(input)
-
-        // TODO refactor below into a receiving function
 
         println("Calculating intensity...")
 
@@ -72,65 +68,93 @@ class ImageGenerator {
         return image
     }
 
-    fun generateXSeam(input: BufferedImage): RenderedImage {
-        val energies = sumSeam(transpose(calculateEnergies(input)))
-
-        // What do I do with multiple seams? Will do greedy first
-
-        // Find min at bottom and Greedy process
-        var min = energies.last().min()
-        var y = energies.size-1
-        var x = energies[y].indexOf( min )
-
-        while (y > 0) {
-
-            input.setRGB(y, x, Color(255, 0, 0).rgb)
-            // iterate through known parents; then know indices directly
-            y -= 1
-            var newX = x
-            min = energies[y][newX]
-            if (x > 0 && energies[y][x-1] < min) {
-                newX -= 1
-                min = energies[y][newX]
-            }
-            if (x < energies[0].size && energies[y][x+1] < min) {
-                newX = x+1
-            }
-            x = newX
+    private fun generateSeam(input: BufferedImage, seamHandler: (BufferedImage, List<Pair<Int, Int>>) -> (BufferedImage), isXSeam: Boolean = false): BufferedImage  {
+        var energies = calculateEnergies(input)
+        if (isXSeam) {
+            energies = transpose(energies)
         }
-        return input
-    }
-
-    fun generateYSeam(input: BufferedImage): RenderedImage  {
-
-        val energies = sumSeam(calculateEnergies(input))
-
-        // TODO refactor below into a receiving function
-
-        // What do I do with multiple seams? Will do greedy first
+        val seamEnergies = sumSeam(energies)
+        val seamPixels = mutableListOf<Pair<Int, Int>>()
 
         // Find min at bottom and Greedy process
-        var min = energies.last().min()
-        var y = energies.size-1
-        var x = energies[y].indexOf( min )
+        var min = seamEnergies.last().min()
+        var y = seamEnergies.size-1
+        var x = seamEnergies[y].indexOf( min )
 
         while (y > 0) {
 
             // Paint
-            input.setRGB(x, y, Color(255, 0, 0).rgb)
+            if (isXSeam) {
+                seamPixels.add(y to x)
+            } else {
+                seamPixels.add(x to y)
+            }
 
             // iterate through known parents; then know indices directly
             y -= 1
             var newX = x
-            min = energies[y][newX]
-            if (x > 0 && energies[y][x-1] < min) {
+            min = seamEnergies[y][newX]
+            if (x > 0 && seamEnergies[y][x-1] < min) {
                 newX -= 1
-                min = energies[y][newX]
+                min = seamEnergies[y][newX]
             }
-            if (x < energies[0].size && energies[y][x+1] < min) {
+            if (x < seamEnergies[0].size-1 && seamEnergies[y][x+1] < min) {
                 newX = x+1
             }
             x = newX
+        }
+        return seamHandler(input, seamPixels)
+    }
+
+    fun iterativeRemoveSeamHandler(input: BufferedImage): BufferedImage {
+        check(xWidth < input.width) { "width parameter must be less than that of input image" }
+        check(xHeight < input.height) { "height parameter must be less than that of input image" }
+
+        var image = input
+        for (wRemove in 1..xWidth) {
+            image = generateSeam(image, ::removeSeamHandler)
+        }
+        for (hRemove in 1..xHeight) {
+            image = generateSeam(image, ::removeXSeamHandler, true)
+        }
+        return image
+    }
+
+    private fun removeSeamHandler(input: BufferedImage, seam: List<Pair<Int, Int>>): BufferedImage {
+        val image = BufferedImage(input.width - 1, input.height, input.type)
+        (0 until image.height).forEach{ y ->
+            var newX = 0
+            (0 until image.width).forEach{ x ->
+                if (!seam.contains(x to y)) {
+                    image.setRGB(newX, y, input.getRGB(x, y))
+                    newX++
+                }
+            }
+        }
+        return image
+    }
+
+    private fun removeXSeamHandler(input: BufferedImage, seam: List<Pair<Int, Int>>): BufferedImage {
+        val image = BufferedImage(input.width, input.height-1, input.type)
+        (0 until image.width).forEach { x ->
+            var newY = 0
+            (0 until image.height).forEach { y ->
+                if (!seam.contains(x to y)) {
+                    image.setRGB(x, newY, input.getRGB(x, y))
+                    newY++
+                }
+            }
+        }
+        return image
+    }
+
+    fun paintSeamHandler(input: BufferedImage, seam: List<Pair<Int, Int>>): BufferedImage {
+        for (y in 0 until input.height) {
+            for (x in 0 until input.width) {
+                if (seam.contains(x to y)) {
+                    input.setRGB(x, y, Color(255, 0, 0).rgb)
+                }
+            }
         }
         return input
     }
@@ -250,5 +274,7 @@ class ImageGenerator {
 
     companion object {
         private const val MAX_RGB: Int = 0xFFFFFF
+        var xWidth: Int = 0
+        var xHeight: Int = 0
     }
 }
