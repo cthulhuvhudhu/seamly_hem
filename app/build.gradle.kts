@@ -35,8 +35,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.1")
 
     // This dependency is used by the application.
-    implementation("com.google.guava:guava:31.1-jre")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.22")
+    implementation("com.google.guava:guava:33.0.0-jre")
 }
 
 application {

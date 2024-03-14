@@ -8,11 +8,9 @@ import javax.imageio.ImageIO
 class FileManager {
 
     fun saveImage(f: RenderedImage, fileName: String) {
-        // TODO overwrite ok for now; may be why it takes longer
         val file = connectFile(sanitize(fileName), System.getProperty("OUTPUT_DIR") ?: "output")
-        ImageIO.write(f, "PNG", file)
+        ImageIO.write(f, "png", file)
 
-        // TODO replace/add logs
         println("File saved as $fileName")
     }
 
