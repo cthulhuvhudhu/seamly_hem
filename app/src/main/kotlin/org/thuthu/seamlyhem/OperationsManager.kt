@@ -1,44 +1,38 @@
 package org.thuthu.seamlyhem
 
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import org.koin.core.parameter.parametersOf
 import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
 
-class OperationsManager(private val iGenerator: ImageGenerator = ImageGenerator(),
-        private val fileManager: FileManager = FileManager()) {
+class OperationsManager(
+    private val inputFileName: String,
+    private val outputFileName: String,
+    private val xWidth: Int,
+    private val xHeight: Int
+) : KoinComponent {
 
-    private lateinit var input: String
-    private lateinit var output: String
+    private val iGenerator: ImageGenerator by inject { parametersOf(xWidth, xHeight) }
+    private val fileManager: FileManager by inject()
 
-    fun process(inputFileName: String, outputFileName: String, xWidth: Int, xHeight: Int) {
-        input = inputFileName
-        output = outputFileName
-        ImageGenerator.xWidth = xWidth
-        ImageGenerator.xHeight = xHeight
-
+    fun process() {
         stage(iGenerator::generateRedCross, "-xcross")
         stage(iGenerator::generateInverted, "-inverted")
         stage(iGenerator::generateIntensity, "-energy")
-        stage(iGenerator::generateYSeam, iGenerator::paintSeamHandler, "-yseam")
-        stage(iGenerator::generateXSeam, iGenerator::paintSeamHandler, "-xseam")
-        stage(iGenerator::iterativeRemoveSeamHandler, "-trim")
+        stage(iGenerator::paintYSeam, "-yseam")
+        stage(iGenerator::paintXSeam, "-xseam")
+        stage(iGenerator::trim, "-trim")
     }
 
     private fun stage(xform: () -> (RenderedImage), suffix: String) {
         val image = xform()
-        fileManager.saveImage(image, "$output$suffix.png")
+        fileManager.saveImage(image, "$outputFileName$suffix.png")
     }
 
-    private fun stage(xform: (BufferedImage, (BufferedImage, List<ImageGenerator.Pixel>) -> (BufferedImage)) -> (BufferedImage),
-                      seamHandler: (BufferedImage, List<ImageGenerator.Pixel>) -> (BufferedImage),
-                      suffix: String) {
-        val inFile = fileManager.getImage(input)
-        val image = xform(inFile, seamHandler)
-        fileManager.saveImage(image, "$output$suffix.png")
-    }
-
-    private fun stage(xform: (BufferedImage) -> (BufferedImage), suffix: String) {
-        val inFile = fileManager.getImage(input)
+    private fun stage(xform: (BufferedImage) -> (RenderedImage), suffix: String) {
+        val inFile = fileManager.getImage(inputFileName)
         val image = xform(inFile)
-        fileManager.saveImage(image, "$output$suffix.png")
+        fileManager.saveImage(image, "$outputFileName$suffix.png")
     }
 }

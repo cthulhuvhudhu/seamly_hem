@@ -1,43 +1,53 @@
 package org.thuthu.seamlyhem
 
-import org.thuthu.seamlyhem.App.Companion.HEIGHT_FLAG
-import org.thuthu.seamlyhem.App.Companion.IN_FLAG
-import org.thuthu.seamlyhem.App.Companion.OUT_FLAG
-import org.thuthu.seamlyhem.App.Companion.WIDTH_FLAG
-import kotlin.system.exitProcess
+import kotlinx.cli.ArgParser
+import kotlinx.cli.ArgType
+import kotlinx.cli.default
+import kotlinx.cli.required
+import org.koin.core.context.GlobalContext.startKoin
+import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.module
 
-class App {
-    internal val operationsManager = OperationsManager()
+class App
 
-    companion object {
-        internal const val IN_FLAG = "-in"
-        internal const val OUT_FLAG = "-out"
-        internal const val WIDTH_FLAG = "-width"
-        internal const val HEIGHT_FLAG = "-height"
-    }
+val appModule = module {
+    single { params -> ImageGenerator(xWidth = params.get(), xHeight = params.get()) }
+    single { params -> OperationsManager(inputFileName = params.get(), outputFileName = params.get(), xWidth = params.get(), xHeight = params.get()) }
+    singleOf(::FileManager)
+    singleOf(::OperationsManager)
 }
 
-fun main(xargs: Array<String>) {
-    checkUsage(xargs)
-    val outImageName = xargs[xargs.indexOfFirst { it == OUT_FLAG } + 1]
-    val inputFileName = xargs[xargs.indexOfFirst { it == IN_FLAG } + 1]
-    val xWidth = xargs[xargs.indexOfFirst { it == WIDTH_FLAG } + 1].toInt()
-    val xHeight = xargs[xargs.indexOfFirst { it == HEIGHT_FLAG } + 1].toInt()
-
-    check(outImageName.isNotBlank()) { "Valid image name for output required." }
-    check(inputFileName.isNotBlank()) { "Valid file name for input required." }
-
-    App().operationsManager.process(inputFileName, outImageName, xWidth, xHeight)
-    TODO("Test validation")
-    TODO("Validate on learning platform")
-    TODO("Performance evaluation: Evaluate stepwise reiterations")
-}
-
-private fun checkUsage(xargs: Array<String>) {
-    if (xargs.contains("help") || xargs.isEmpty() || !xargs.contains(IN_FLAG) || !xargs.contains(OUT_FLAG)
-        || !xargs.contains(WIDTH_FLAG) || !xargs.contains(HEIGHT_FLAG)) {
-        println("Expected usage:")
-        println("-in inputFileName -out outputFileName -width intPixels -height intPixels")
-        exitProcess(0)
+fun main(args: Array<String>) {
+    startKoin {
+        modules(appModule)
     }
+
+    val parser = ArgParser("seamlyhem")
+    val inputFileName by parser.option(
+        ArgType.String,
+        shortName = "i",
+        fullName = "in",
+        description = "input filename",
+    ).required()
+    val outImageName by parser.option(
+        ArgType.String,
+        shortName = "o",
+        fullName = "out",
+        description = "output root filename"
+    ).default("out")
+    val xWidth by parser.option(
+        ArgType.Int,
+        shortName = "xw",
+        fullName = "xwidth",
+        description = "width reduction amount"
+    ).default(0)
+    val xHeight by parser.option(
+        ArgType.Int,
+        shortName = "xh",
+        fullName = "xheight",
+        description = "height reduction amount"
+    ).default(0)
+    parser.parse(args)
+
+    OperationsManager(inputFileName, outImageName, xWidth, xHeight).process()
 }

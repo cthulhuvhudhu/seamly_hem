@@ -1,11 +1,12 @@
 package org.thuthu.seamlyhem
 
+import org.koin.core.component.KoinComponent
 import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
 import java.io.File
 import javax.imageio.ImageIO
 
-class FileManager {
+class FileManager : KoinComponent {
 
     fun saveImage(f: RenderedImage, fileName: String) {
         val file = connectFile(sanitize(fileName), System.getProperty("OUTPUT_DIR") ?: "output")

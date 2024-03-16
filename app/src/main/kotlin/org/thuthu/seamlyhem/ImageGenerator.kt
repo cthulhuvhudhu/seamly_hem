@@ -1,17 +1,18 @@
 package org.thuthu.seamlyhem
 
+import org.koin.core.component.KoinComponent
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
 import kotlin.math.sqrt
 
-class ImageGenerator {
+class ImageGenerator(private val xWidth: Int, private val xHeight: Int) : KoinComponent {
 
     fun generateRedCross(): RenderedImage {
         println("Enter rectangle width:")
-        val w = readln().toInt() // 20
+        val w = readln().toInt()
         println("Enter rectangle height:")
-        val h = readln().toInt() // 20
+        val h = readln().toInt()
 
         println("Generating red cross ...")
         // Create a BufferedImage with a black square
@@ -36,12 +37,11 @@ class ImageGenerator {
 
     fun generateInverted(input: BufferedImage): BufferedImage {
         println("Inverting image ...")
-        // To create a negative image, you should invert all color components for every pixel.
         // Inverted color for (r, g, b) is (255 - r, 255 - g, 255 - b).
-        for (x in 0 until input.width) {
-            for (y in 0 until input.height) {
+        (0 until input.width).forEach { x ->
+            (0 until input.height).forEach { y ->
                 val rgb = input.getRGB(x, y) // HEX RGB int
-                input.setRGB(x, y, MAX_RGB - rgb)
+                input.setRGB(x, y, Companion.MAX_RGB - rgb)
             }
         }
         return input
@@ -49,6 +49,7 @@ class ImageGenerator {
 
     fun generateIntensity(input: BufferedImage): BufferedImage {
 
+        assert(input.width > 2 && input.height > 2)
         val energies = calculateEnergies(input)
         val image = BufferedImage(input.width, input.height, BufferedImage.TYPE_INT_RGB)
 
@@ -65,70 +66,62 @@ class ImageGenerator {
         return image
     }
 
-    class Pixel(val x: Int, val y: Int, val sumE: Double)
-
-    fun generateYSeam(input: BufferedImage, seamHandler: (BufferedImage, List<Pixel>) -> (BufferedImage)): BufferedImage  {
-        return generateSeam(input, seamHandler, false)
-    }
-
-    fun generateXSeam(input: BufferedImage, seamHandler: (BufferedImage, List<Pixel>) -> (BufferedImage)): BufferedImage  {
-        return generateSeam(input, seamHandler, true)
-    }
-
-    private fun generateSeam(input: BufferedImage, seamHandler: (BufferedImage, List<Pixel>) -> (BufferedImage), isXSeam: Boolean = false): BufferedImage  {
+    private fun generateSeam(input: BufferedImage, isXSeam: Boolean = false): List<Pixel>  {
         var energies = calculateEnergies(input)
         if (isXSeam) {
             energies = transpose(energies)
         }
 
         // Top to bottom dijkstra, pruning each row as islets
-        var path = energies[0].mapIndexed { idx, e -> listOf(Pixel(idx, 0, e)) }.toTypedArray()
+        var paths = energies[0].mapIndexed { idx, e -> listOf(Pixel(idx, 0, e)) }.toTypedArray()
 
         (1 until energies.size - 1).forEach { y ->
             val nextRow = Array<List<Pixel>>(energies[0].size) {  emptyList() }
             (energies[0].indices).forEach { x ->
-                val candidates = mutableListOf(path[x])
+                val candidates = mutableListOf(paths[x])
                 if (x - 1 in energies[0].indices) {
-                    candidates.add(path[x - 1])
+                    candidates.add(paths[x - 1])
                 }
                 if (x + 1 in energies[0].indices) {
-                    candidates.add(path[x + 1])
+                    candidates.add(paths[x + 1])
                 }
                 val winner = candidates.minByOrNull { it.last().sumE }!!.toMutableList()
                 winner.add(Pixel(x, y, energies[y][x] + winner.last().sumE))
                 nextRow[x] = winner
             }
-            path = nextRow
+            paths = nextRow
         }
 
-        val seamPixels = if (isXSeam) {
-            path.minByOrNull { it.last().sumE }!!.map { Pixel(it.y, it.x, it.sumE) }.toList()
-        } else {
-            path.minByOrNull { it.last().sumE }!!
+        var solution = paths.minByOrNull { it.last().sumE }!!
+
+        if (isXSeam) {
+            solution = solution.map { Pixel(it.y, it.x, it.sumE) }.toList()
         }
 
-        return seamHandler(input, seamPixels)
+        return solution
     }
 
-    fun iterativeRemoveSeamHandler(input: BufferedImage): BufferedImage {
+    fun trim(input: BufferedImage): BufferedImage {
         check(xWidth < input.width) { "width parameter must be less than that of input image" }
         check(xHeight < input.height) { "height parameter must be less than that of input image" }
 
         var image = input
-        for (wRemove in 1..xWidth) {
-            image = generateSeam(image, ::removeSeamHandler)
+        repeat(xWidth) {
+            val seam = generateSeam(image, false)
+            image = removeYSeam(image, seam)
         }
-        for (hRemove in 1..xHeight) {
-            image = generateSeam(image, ::removeXSeamHandler, true)
+        repeat(xHeight) {
+            val seam = generateSeam(image, true)
+            image = removeXSeam(image, seam)
         }
         return image
     }
 
-    private fun removeSeamHandler(input: BufferedImage, seam: List<Pixel>): BufferedImage {
-        val image = BufferedImage(input.width - 1, input.height, input.type)
-        (0 until image.height).forEach{ y ->
+    private fun removeYSeam(input: BufferedImage, seam: List<Pixel>): BufferedImage {
+        val image = BufferedImage(input.width - 1, input.height, BufferedImage.TYPE_INT_RGB)
+        (0 until input.height).forEach { y ->
             var newX = 0
-            (0 until image.width).forEach{ x ->
+            (0 until input.width).forEach { x ->
                 if (seam.none { it.x == x && it.y == y }) {
                     image.setRGB(newX, y, input.getRGB(x, y))
                     newX++
@@ -138,11 +131,11 @@ class ImageGenerator {
         return image
     }
 
-    private fun removeXSeamHandler(input: BufferedImage, seam: List<Pixel>): BufferedImage {
-        val image = BufferedImage(input.width, input.height-1, input.type)
-        (0 until image.width).forEach { x ->
+    private fun removeXSeam(input: BufferedImage, seam: List<Pixel>): BufferedImage {
+        val image = BufferedImage(input.width, input.height - 1 , BufferedImage.TYPE_INT_RGB)
+        (0 until input.width).forEach { x ->
             var newY = 0
-            (0 until image.height).forEach { y ->
+            (0 until input.height).forEach { y ->
                 if (seam.none { it.x == x && it.y == y }) {
                     image.setRGB(x, newY, input.getRGB(x, y))
                     newY++
@@ -152,7 +145,17 @@ class ImageGenerator {
         return image
     }
 
-    fun paintSeamHandler(input: BufferedImage, seam: List<Pixel>): BufferedImage {
+    fun paintXSeam(input: BufferedImage): RenderedImage {
+        val seam = generateSeam(input, true)
+        return paintSeam(input, seam)
+    }
+
+    fun paintYSeam(input: BufferedImage): RenderedImage {
+        val seam = generateSeam(input, false)
+        return paintSeam(input, seam)
+    }
+
+    fun paintSeam(input: BufferedImage, seam: List<Pixel>): BufferedImage {
         seam.forEach { input.setRGB(it.x, it.y, Color(255, 0, 0).rgb) }
         return input
     }
@@ -192,6 +195,8 @@ class ImageGenerator {
         return energies
     }
 
+    class Pixel(val x: Int, val y: Int, val sumE: Double)
+
     private fun transpose(m: List<List<Double>>): MutableList<MutableList<Double>> {
         val t = MutableList(m[0].size){
             MutableList(m.size) { 0.0 }
@@ -223,7 +228,5 @@ class ImageGenerator {
 
     companion object {
         private const val MAX_RGB: Int = 0xFFFFFF
-        var xWidth: Int = 0
-        var xHeight: Int = 0
     }
 }

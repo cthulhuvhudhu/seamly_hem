@@ -8,7 +8,7 @@
 
 plugins {
     // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
-    id("org.jetbrains.kotlin.jvm") version "1.7.10"
+    id("org.jetbrains.kotlin.jvm") version "1.9.0"
     // Apply the application plugin to add support for building a CLI application in Java.
     application // possible issue with CLI input when run from gradlew in IDE
 }
@@ -36,6 +36,8 @@ dependencies {
 
     // This dependency is used by the application.
     implementation("com.google.guava:guava:33.0.0-jre")
+    implementation("io.insert-koin:koin-core:3.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
 }
 
 application {
