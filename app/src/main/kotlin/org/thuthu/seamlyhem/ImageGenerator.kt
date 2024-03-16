@@ -67,6 +67,7 @@ class ImageGenerator(private val xWidth: Int, private val xHeight: Int) : KoinCo
     }
 
     private fun generateSeam(input: BufferedImage, isXSeam: Boolean = false): List<Pixel>  {
+        println("Finding seam...")
         var energies = calculateEnergies(input)
         if (isXSeam) {
             energies = transpose(energies)
@@ -75,7 +76,7 @@ class ImageGenerator(private val xWidth: Int, private val xHeight: Int) : KoinCo
         // Top to bottom dijkstra, pruning each row as islets
         var paths = energies[0].mapIndexed { idx, e -> listOf(Pixel(idx, 0, e)) }.toTypedArray()
 
-        (1 until energies.size - 1).forEach { y ->
+        (1 until energies.size).forEach { y ->
             val nextRow = Array<List<Pixel>>(energies[0].size) {  emptyList() }
             (energies[0].indices).forEach { x ->
                 val candidates = mutableListOf(paths[x])
@@ -102,6 +103,7 @@ class ImageGenerator(private val xWidth: Int, private val xHeight: Int) : KoinCo
     }
 
     fun trim(input: BufferedImage): BufferedImage {
+        println("Trimming image...")
         check(xWidth < input.width) { "width parameter must be less than that of input image" }
         check(xHeight < input.height) { "height parameter must be less than that of input image" }
 
@@ -155,7 +157,8 @@ class ImageGenerator(private val xWidth: Int, private val xHeight: Int) : KoinCo
         return paintSeam(input, seam)
     }
 
-    fun paintSeam(input: BufferedImage, seam: List<Pixel>): BufferedImage {
+    private fun paintSeam(input: BufferedImage, seam: List<Pixel>): BufferedImage {
+        println("Painting seam...")
         seam.forEach { input.setRGB(it.x, it.y, Color(255, 0, 0).rgb) }
         return input
     }
